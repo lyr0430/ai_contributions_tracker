@@ -5,14 +5,14 @@
 # 用法 1（从 clone 的仓库执行）：
 #   cd your-project && bash /path/to/ai-code-contributions/install.sh
 #
-# 用法 2（一行命令，自动 clone）：
+# 用法 2（一行命令，自动下载）：
 #   cd your-project && bash <(curl -sL https://raw.githubusercontent.com/lyr0430/ai_contributions_tracker/main/install.sh)
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(pwd)"
-REPO_URL="https://github.com/lyr0430/ai_contributions_tracker.git"
+REPO_ZIP_URL="https://github.com/lyr0430/ai_contributions_tracker/archive/refs/heads/main.zip"
 CLONE_DIR="/tmp/ai-contributions-tracker-$$"
 
 echo "========================================="
@@ -49,14 +49,30 @@ fi
 
 echo "Python:    $($PYTHON --version)"
 
-# 如果是从 curl 执行的（没有 tracker 源码），自动 clone
+# 如果是从 curl 执行的（没有 tracker 源码），自动下载
 SOURCE_TRACKER="$SCRIPT_DIR/tracker/ai_tracker"
 if [ ! -f "$SOURCE_TRACKER/__init__.py" ]; then
     echo ""
     echo "下载 ai-tracker..."
     rm -rf "$CLONE_DIR"
-    git clone --depth 1 "$REPO_URL" "$CLONE_DIR" 2>/dev/null
-    SOURCE_TRACKER="$CLONE_DIR/tracker/ai_tracker"
+    mkdir -p "$CLONE_DIR"
+
+    ZIP_FILE="$CLONE_DIR/repo.zip"
+    if curl -sL "$REPO_ZIP_URL" -o "$ZIP_FILE" && [ -s "$ZIP_FILE" ]; then
+        unzip -q "$ZIP_FILE" -d "$CLONE_DIR"
+        # 解压后的目录名是 ai_contributions_tracker-main
+        SOURCE_TRACKER="$CLONE_DIR/ai_contributions_tracker-main/tracker/ai_tracker"
+    else
+        echo "下载失败，请检查网络连接"
+        rm -rf "$CLONE_DIR"
+        exit 1
+    fi
+fi
+
+if [ ! -f "$SOURCE_TRACKER/__init__.py" ]; then
+    echo "错误: 下载的文件不完整，请重试"
+    rm -rf "$CLONE_DIR"
+    exit 1
 fi
 
 # 复制 ai_tracker 到项目的 .ai-contributions/ 目录（无需 pip install）
@@ -74,10 +90,8 @@ if [ -f "$TRACKER_PARENT/.env" ]; then
 fi
 echo "  已复制 ai_tracker 到 $LOCAL_TRACKER"
 
-# 清理临时 clone
-if [ -d "$CLONE_DIR" ]; then
-    rm -rf "$CLONE_DIR"
-fi
+# 清理临时文件
+rm -rf "$CLONE_DIR"
 
 # 读取 server 地址
 SERVER_URL=$($PYTHON -c "
