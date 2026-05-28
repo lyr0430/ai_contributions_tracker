@@ -73,6 +73,12 @@ def print_report(result: AnalysisResult, repo_root: Path = None) -> None:
     print(bold("  └─────────────────────────────────────────────┘"))
     print()
 
+    # AI 原始生成量
+    print(bold("  AI 原始生成量（含后续被修改/删除的）:"))
+    print(f"    行数：{result.ai_generated_lines}  字符数：{result.ai_generated_chars}")
+    print()
+    print()
+
     # 分解
     total = result.total_push_lines or 1
     print(bold("  明细:"))
@@ -152,12 +158,21 @@ def save_json_report(result: AnalysisResult, output_path: Path) -> None:
             "generation_rate": round(result.generation_rate, 4),
             "retention_rate": round(result.retention_rate, 4),
             "net_contribution": round(result.net_contribution, 4),
+            "ai_generated_lines": result.ai_generated_lines,
+            "ai_generated_chars": result.ai_generated_chars,
             "breakdown": {
                 "ai_pure": result.ai_pure_total,
                 "ai_modified": result.ai_modified_total,
                 "mixed": result.mixed_total,
                 "human": result.human_total,
                 "deleted_ai": result.deleted_ai_total,
+            },
+            "chars": {
+                "ai_pure": result.ai_pure_chars,
+                "ai_modified": result.ai_modified_chars,
+                "mixed": result.mixed_chars,
+                "human": result.human_chars,
+                "total": result.total_chars,
             },
         },
         "files": [

@@ -90,6 +90,17 @@ class AnalysisRequest(BaseModel):
     human_lines: int
     deleted_ai_lines: int
 
+    # 字符统计
+    ai_pure_chars: int = 0
+    ai_modified_chars: int = 0
+    mixed_chars: int = 0
+    human_chars: int = 0
+    total_chars: int = 0
+
+    # AI 原始生成量（不考虑后续修改）
+    ai_generated_lines: int = 0
+    ai_generated_chars: int = 0
+
     # 文件明细（每个文件包含 source 字段区分 AI/手动）
     files: List[dict] = []
 
@@ -174,6 +185,7 @@ async def save_analysis_endpoint(req: AnalysisRequest):
     for f in req.files:
         op_id = f"push_{req.commit_hash[:8]}_{f['path'].replace('/', '_')}"
         total_lines = f.get("ai_pure_lines", 0) + f.get("ai_modified_lines", 0) + f.get("mixed_lines", 0) + f.get("human_lines", 0)
+        total_chars = f.get("ai_pure_chars", 0) + f.get("ai_modified_chars", 0) + f.get("mixed_chars", 0) + f.get("human_chars", 0)
         record = OperationRecord(
             project_name=req.project_name,
             project_path=req.project_path,
@@ -189,6 +201,13 @@ async def save_analysis_endpoint(req: AnalysisRequest):
             mixed_lines=f.get("mixed_lines", 0),
             human_lines=f.get("human_lines", 0),
             total_lines=total_lines,
+            ai_pure_chars=f.get("ai_pure_chars", 0),
+            ai_modified_chars=f.get("ai_modified_chars", 0),
+            mixed_chars=f.get("mixed_chars", 0),
+            human_chars=f.get("human_chars", 0),
+            total_chars=total_chars,
+            ai_generated_lines=f.get("ai_pure_lines", 0) + f.get("ai_modified_lines", 0) + f.get("mixed_lines", 0),
+            ai_generated_chars=f.get("ai_pure_chars", 0) + f.get("ai_modified_chars", 0) + f.get("mixed_chars", 0),
         )
         record_ids.append(save_operation(record))
 

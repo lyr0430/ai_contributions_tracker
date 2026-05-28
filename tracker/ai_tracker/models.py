@@ -83,6 +83,13 @@ class FileAttribution:
     ai_weighted_sum: float = 0.0    # 加权 AI 贡献总和
     line_details: List[LineAttribution] = field(default_factory=list)
 
+    # 字符统计
+    total_chars: int = 0
+    ai_pure_chars: int = 0
+    ai_modified_chars: int = 0
+    human_chars: int = 0
+    mixed_chars: int = 0
+
     @property
     def ai_contribution_ratio(self) -> float:
         if self.total_lines == 0:
@@ -126,6 +133,36 @@ class AnalysisResult:
     @property
     def deleted_ai_total(self) -> int:
         return len(self.deleted_ai)
+
+    @property
+    def ai_generated_lines(self) -> int:
+        """AI 原始生成行数：纯AI + AI修改 + 混合 + 被删除的AI行"""
+        return self.ai_pure_total + self.ai_modified_total + self.mixed_total + self.deleted_ai_total
+
+    @property
+    def ai_generated_chars(self) -> int:
+        """AI 原始生成字符数"""
+        return self.ai_pure_chars + self.ai_modified_chars + self.mixed_chars
+
+    @property
+    def ai_pure_chars(self) -> int:
+        return sum(f.ai_pure_chars for f in self.files)
+
+    @property
+    def ai_modified_chars(self) -> int:
+        return sum(f.ai_modified_chars for f in self.files)
+
+    @property
+    def human_chars(self) -> int:
+        return sum(f.human_chars for f in self.files)
+
+    @property
+    def mixed_chars(self) -> int:
+        return sum(f.mixed_chars for f in self.files)
+
+    @property
+    def total_chars(self) -> int:
+        return sum(f.total_chars for f in self.files)
 
     @property
     def generation_rate(self) -> float:

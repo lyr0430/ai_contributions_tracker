@@ -44,3 +44,4 @@ htmlcov/
 # Local development
 .ai-contributions/
 *.db
+server/data/

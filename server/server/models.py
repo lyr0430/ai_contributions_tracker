@@ -33,6 +33,17 @@ class OperationRecord(SQLModel, table=True):
     human_lines: int = 0
     total_lines: int = 0
 
+    # 字符统计
+    ai_pure_chars: int = 0
+    ai_modified_chars: int = 0
+    mixed_chars: int = 0
+    human_chars: int = 0
+    total_chars: int = 0
+
+    # AI 原始生成量（不考虑后续修改）
+    ai_generated_lines: int = 0
+    ai_generated_chars: int = 0
+
     # 服务器记录时间
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

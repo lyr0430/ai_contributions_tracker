@@ -215,6 +215,10 @@ def _push_to_server(
             "ai_modified_lines": f.ai_modified_lines,
             "mixed_lines": f.mixed_lines,
             "human_lines": f.human_lines,
+            "ai_pure_chars": f.ai_pure_chars,
+            "ai_modified_chars": f.ai_modified_chars,
+            "mixed_chars": f.mixed_chars,
+            "human_chars": f.human_chars,
         })
 
     # 获取 branch 信息
@@ -253,6 +257,13 @@ def _push_to_server(
             "mixed_lines": result.mixed_total,
             "human_lines": result.human_total,
             "deleted_ai_lines": result.deleted_ai_total,
+            "ai_pure_chars": result.ai_pure_chars,
+            "ai_modified_chars": result.ai_modified_chars,
+            "mixed_chars": result.mixed_chars,
+            "human_chars": result.human_chars,
+            "total_chars": result.total_chars,
+            "ai_generated_lines": result.ai_generated_lines,
+            "ai_generated_chars": result.ai_generated_chars,
             "files": files_data,
         }
 

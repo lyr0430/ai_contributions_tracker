@@ -306,6 +306,7 @@ def _attribute_file(
         changed_lines = {i + 1: line for i, line in enumerate(final_lines)}
         fa.total_lines = len(final_lines)
 
+    # 第一轮：逐行归因
     for line_no, content in changed_lines.items():
         attribution = _attribute_line(content, ai_pool)
 
@@ -319,16 +320,43 @@ def _attribute_file(
         )
 
         fa.line_details.append(la)
+
+    # 第二轮：上下文修正 — 如果文件大部分是 AI 写的，剩余未匹配行也归为 AI
+    if ai_pool:
+        ai_count = sum(1 for la in fa.line_details if la.source in ("ai_pure", "ai_modified"))
+        mixed_count = sum(1 for la in fa.line_details if la.source == "mixed")
+        total = len(fa.line_details)
+        if total > 0 and (ai_count + mixed_count) / total >= 0.5:
+            # 超过 50% 是 AI 写的，剩余 human 行降级为 ai_modified
+            for la in fa.line_details:
+                if la.source == "human":
+                    # 再试一次更宽松的匹配
+                    match = find_best_match(la.content, ai_pool, threshold=0.15)
+                    if match:
+                        _, event_id, score = match
+                        la.source = "ai_modified"
+                        la.ai_ratio = max(score, 0.5)
+                        la.matched_event_id = event_id
+                        la.similarity_score = score
+
+    # 统计行数和字符数
+    for la in fa.line_details:
+        char_count = len(la.content)
+        fa.total_chars += char_count
         fa.ai_weighted_sum += la.ai_ratio
 
         if la.source == "ai_pure":
             fa.ai_pure_lines += 1
+            fa.ai_pure_chars += char_count
         elif la.source == "ai_modified":
             fa.ai_modified_lines += 1
+            fa.ai_modified_chars += char_count
         elif la.source == "mixed":
             fa.mixed_lines += 1
+            fa.mixed_chars += char_count
         else:
             fa.human_lines += 1
+            fa.human_chars += char_count
 
     return fa
 

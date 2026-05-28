@@ -13,16 +13,15 @@ def get_database_url() -> str:
     db_url = os.environ.get("DATABASE_URL")
     if db_url:
         return db_url
-    # 默认 SQLite - 使用当前工作目录的相对路径
-    db_dir = Path.cwd() / ".ai-contributions"
+    # 默认 SQLite - 固定在 server 项目目录下
+    db_dir = Path(__file__).parent.parent / "data"
     db_dir.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{db_dir / 'contributions.db'}"
 
 
 def get_snapshots_path() -> Path:
     """获取快照存储路径"""
-    # 使用当前工作目录的相对路径
-    base = Path.cwd() / ".ai-contributions" / "snapshots"
+    base = Path(__file__).parent.parent / "data" / "snapshots"
     base.mkdir(parents=True, exist_ok=True)
     return base
 
