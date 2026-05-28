@@ -81,6 +81,10 @@ def _install_git_hook(repo_root: Path, python_cmd: str, server_url: str = None) 
 def _generate_hook_script(python_cmd: str, repo_root: Path, server_url: str = None) -> str:
     """生成 pre-push hook 脚本（跨平台）"""
 
+    # 本地安装路径：.ai-contributions/ai_tracker/
+    local_tracker = repo_root / ".ai-contributions" / "ai_tracker"
+    local_tracker_escaped = str(local_tracker).replace("\\", "\\\\")
+
     server_arg = f'--push "{server_url}"'
     project_arg = f'--project "{repo_root.name}"'
 
@@ -91,7 +95,8 @@ def _generate_hook_script(python_cmd: str, repo_root: Path, server_url: str = No
         args = ', '.join([server_arg, project_arg])
         return f'''#!/usr/bin/env python3
 """Git pre-push hook — AI Contribution Tracker"""
-import subprocess, sys
+import sys
+sys.path.insert(0, r"{local_tracker}")
 try:
     from ai_tracker.__main__ import run_pre_push_analysis
     run_pre_push_analysis({args})
@@ -99,10 +104,11 @@ except Exception as e:
     print(f"[ai-tracker] Analysis error: {{e}}", file=sys.stderr)
 '''
     else:
-        # macOS / Linux: shell 脚本（包已通过 pip install 安装，无需 PYTHONPATH）
+        # macOS / Linux: 使用本地 .ai-contributions/ai_tracker/
         return f'''#!/bin/sh
 # AI Contribution Tracker — pre-push hook
 PYTHON="{python_cmd}"
+export PYTHONPATH="{local_tracker_escaped}:$PYTHONPATH"
 "$PYTHON" -m ai_tracker pre-push {server_arg} {project_arg}
 RET=$?
 if [ $RET -ne 0 ]; then
@@ -128,11 +134,12 @@ def _install_claude_hook(repo_root: Path, python_cmd: str, server_url: str = Non
         except (json.JSONDecodeError, OSError):
             settings = {}
 
-    # 构建环境变量（包已通过 pip install 安装，无需 PYTHONPATH）
-    env_vars = f'AI_TRACKER_SERVER="{server_url}" AI_TRACKER_PROJECT="{repo_root.name}" '
+    # 使用本地 .ai-contributions/ai_tracker/，无需 pip install
+    local_tracker = repo_root / ".ai-contributions" / "ai_tracker"
+    env_vars = f'AI_TRACKER_SERVER="{server_url}" AI_TRACKER_PROJECT="{repo_root.name}" PYTHONPATH="{local_tracker}" '
 
     if sys.platform == "win32":
-        hook_cmd = f'{python_cmd} -c "import os; os.environ[\"AI_TRACKER_SERVER\"]=\"{server_url}\"; from ai_tracker.hook_handler import handle_hook; handle_hook()"'
+        hook_cmd = f'{python_cmd} -c "import sys,os; sys.path.insert(0, r\'{local_tracker}\'); os.environ[\"AI_TRACKER_SERVER\"]=\"{server_url}\"; from ai_tracker.hook_handler import handle_hook; handle_hook()"'
     else:
         hook_cmd = f'{env_vars}{python_cmd} -m ai_tracker.hook_handler'
 
