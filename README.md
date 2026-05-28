@@ -1,116 +1,133 @@
 # AI Code Contributions
 
-AI 代码贡献追踪系统，用于记录和分析 AI 生成的代码贡献。
+AI 代码贡献追踪系统 — 自动统计项目中 AI 与人工的代码贡献比例。
+
+## 快速安装
+
+在你的项目目录下执行一条命令即可：
+
+```bash
+cd your-project
+bash <(curl -sL https://raw.githubusercontent.com/lyr0430/ai_contributions_tracker/main/install.sh)
+```
+
+安装完成后，**不需要任何配置**，以下行为会自动触发：
+
+| 场景 | 行为 |
+|------|------|
+| Claude Code 写代码 | 自动记录 AI 写了哪些行 |
+| `git push` | 自动分析并上报到服务器 |
+
+## 工作原理
+
+```
+Claude Code 写代码
+  → PostToolUse hook 记录 AI 事件到 .ai-contributions/events.jsonl
+
+git push
+  → pre-push hook 运行分析
+  → 对比 git diff + AI 事件，逐行归因
+  → 上报到后端服务器（含作者、项目、行数、字符数）
+```
+
+### 归因逻辑
+
+每行代码会被归入以下类别：
+
+| 类别 | 说明 |
+|------|------|
+| **纯 AI** | AI 生成且未被修改（相似度 > 95%） |
+| **AI 修改** | AI 生成后被人工微调（相似度 > 60%） |
+| **混合** | AI 与人工共同贡献（相似度 > 30%） |
+| **人工** | 完全由人工编写 |
+
+如果文件中超过 50% 的行是 AI 生成的，剩余未匹配的行会用更宽松的阈值重新判定，避免人工小修改导致误判。
+
+### 统计维度
+
+- **行数**：纯AI行 / AI修改行 / 混合行 / 人工行
+- **字符数**：每个类别的字符总数
+- **AI 原始生成量**：AI 一共写了多少（含后续被修改的），不关心最终状态
+- **AI 净贡献率**：最终 push 中可归因于 AI 的比例
+
+## 后端服务
+
+### 启动
+
+```bash
+cd server
+pip install -r requirements.txt
+python -m server
+```
+
+服务默认监听 `http://localhost:8000`，数据存储在 `server/data/contributions.db`。
+
+### 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `DATABASE_URL` | 数据库连接地址 | SQLite (server/data/) |
+| `AI_TRACKER_SERVER` | 服务端地址（覆盖 .env） | http://localhost:8000 |
+
+### API 接口
+
+```bash
+# 健康检查
+curl http://localhost:8000/api/health
+
+# 查询统计汇总
+curl "http://localhost:8000/api/summary"
+
+# 按作者统计
+curl "http://localhost:8000/api/report?group_by=author"
+
+# 按项目统计
+curl "http://localhost:8000/api/report?project_name=xxx&group_by=commit"
+
+# 按文件统计
+curl "http://localhost:8000/api/report?group_by=file"
+
+# 筛选某人的记录
+curl "http://localhost:8000/api/summary?author_name=张三"
+
+# 按日期筛选
+curl "http://localhost:8000/api/summary?from_date=2026-01-01&to_date=2026-05-31"
+```
+
+## 更新
+
+重新执行安装命令即可更新本地的 tracker 代码：
+
+```bash
+cd your-project
+bash <(curl -sL https://raw.githubusercontent.com/lyr0430/ai_contributions_tracker/main/install.sh)
+```
 
 ## 项目结构
 
 ```
 ai-code-contributions/
-├── tracker/              # AI 代码追踪器（Python 包）
-│   ├── ai_tracker/       # 核心模块
-│   ├── tests/            # 测试
-│   ├── README.md         # 使用文档
-│   ├── CHANGES.md        # 更新日志
-│   ├── pyproject.toml    # Poetry 配置
-│   ├── setup.py          # Setup 脚本
-│   └── requirements.txt  # 依赖
+├── install.sh              # 一键安装脚本
+├── tracker/                # AI 代码追踪器
+│   ├── ai_tracker/         # 核心模块
+│   │   ├── analyzer.py     # 分析引擎（归因逻辑）
+│   │   ├── similarity.py   # 相似度计算
+│   │   ├── hook_handler.py # Claude Code hook 处理
+│   │   ├── installer.py    # 安装器（写入 hooks）
+│   │   ├── reporter.py     # 报告生成
+│   │   ├── models.py       # 数据模型
+│   │   ├── config.py       # 配置（.env 读取）
+│   │   └── event_store.py  # 事件存储
+│   ├── .env                # 配置文件（服务器地址）
+│   └── setup.py
 │
-└── server/               # 后端服务（FastAPI）
-    ├── server/           # 服务代码
-    ├── README.md         # 使用文档
-    └── requirements.txt  # 依赖
-```
-
-## 快速开始
-
-### 1. 安装追踪器
-
-```bash
-cd tracker
-pip install -e .
-```
-
-### 2. 在项目中安装 hooks
-
-```bash
-# 在你的项目目录中
-ai-tracker install
-
-# 可选：指定服务器 URL
-ai-tracker install --server http://localhost:8000
-```
-
-### 3. 启动后端服务
-
-```bash
-cd server
-python -m server
-```
-
-## 功能特性
-
-### 追踪器 (tracker)
-
-- **实时记录**: 自动记录 Claude Code 的 Write/Edit/MultiEdit 操作
-- **智能分析**: 通过相似度匹配识别 AI 生成的代码行
-- **Git 集成**: pre-push hook 自动分析提交内容
-- **报告生成**: 终端、JSON、Markdown 格式的报告
-
-### 后端服务 (server)
-
-- **操作记录**: 存储 Claude Code 的实时操作记录
-- **提交分析**: 存储 pre-push 分析结果
-- **统计报告**: 按项目、作者、日期生成统计报告
-- **快照存储**: 保存文件快照用于后续分析
-
-## 使用示例
-
-### 记录 AI 操作
-
-安装 hooks 后，Claude Code 的所有操作都会自动记录。
-
-### 手动分析
-
-```bash
-# 分析当前分支的变更
-ai-tracker analyze
-
-# 生成 JSON 报告
-ai-tracker analyze --json report.json
-
-# 推送到服务器
-ai-tracker analyze --push http://localhost:8000 --project myproject
-```
-
-### 查询报告
-
-```bash
-# 从服务器查询报告
-ai-tracker report --server http://localhost:8000
-
-# 按项目过滤
-ai-tracker report --server http://localhost:8000 --project myproject
-```
-
-## 文档
-
-- [追踪器文档](tracker/README.md)
-- [后端服务文档](server/README.md)
-
-## 开发
-
-### 运行测试
-
-```bash
-cd tracker
-pytest
-```
-
-### 启动开发服务器
-
-```bash
-cd server
-uvicorn server.api:app --reload --host 0.0.0.0 --port 8000
+└── server/                 # 后端服务（FastAPI）
+    ├── server/
+    │   ├── api.py          # API 接口
+    │   ├── db.py           # 数据库操作
+    │   └── models.py       # 数据模型
+    ├── data/               # SQLite 数据库（gitignore）
+    └── requirements.txt
 ```
 
 ## 许可证
