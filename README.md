@@ -4,11 +4,13 @@ AI 代码贡献追踪系统 — 自动统计项目中 AI 与人工的代码贡�
 
 ## 快速安装
 
-在你的项目目录下执行一条命令即可：
-
 ```bash
+# 1. 下载安装脚本
+curl -sL https://raw.githubusercontent.com/lyr0430/ai_contributions_tracker/main/install.sh -o /tmp/install-ai-tracker.sh
+
+# 2. 在你的项目目录下执行
 cd your-project
-bash <(curl -sL https://raw.githubusercontent.com/lyr0430/ai_contributions_tracker/main/install.sh)
+bash /tmp/install-ai-tracker.sh
 ```
 
 安装完成后，**不需要任何配置**，以下行为会自动触发：
@@ -99,8 +101,9 @@ curl "http://localhost:8000/api/summary?from_date=2026-01-01&to_date=2026-05-31"
 重新执行安装命令即可更新本地的 tracker 代码：
 
 ```bash
+curl -sL https://raw.githubusercontent.com/lyr0430/ai_contributions_tracker/main/install.sh -o /tmp/install-ai-tracker.sh
 cd your-project
-bash <(curl -sL https://raw.githubusercontent.com/lyr0430/ai_contributions_tracker/main/install.sh)
+bash /tmp/install-ai-tracker.sh
 ```
 
 ## 项目结构
